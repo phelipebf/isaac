@@ -1,0 +1,80 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────
+#  Isaac – Farm & Homestead Dashboard
+#  docker compose up -d
+# ─────────────────────────────────────────────────────────
+
+services:
+
+  # ── Backend: Python / FastAPI ──────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: isaac-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: "sqlite:////data/isaac.db"
+      UPLOAD_DIR: "/data/uploads"
+      SECRET_KEY: "${SECRET_KEY:-change-me-in-production}"
+      # ── Optional ──
+      # AMBIENT_WEATHER_API_KEY: "${AMBIENT_WEATHER_API_KEY}"
+      # AMBIENT_WEATHER_APP_KEY: "${AMBIENT_WEATHER_APP_KEY}"
+      # SMTP_HOST: "${SMTP_HOST}"
+      # SMTP_PORT: "${SMTP_PORT:-587}"
+      # SMTP_USER: "${SMTP_USER}"
+      # SMTP_PASS: "${SMTP_PASS}"
+    volumes:
+      - isaac-data:/data
+    networks:
+      - isaac-net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ── Frontend: React + Nginx ────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        # Points to Nginx proxy to /api/
+        VITE_API_URL: "/api"
+    container_name: isaac-frontend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - isaac-net
+
+  # ── CalDAV (Radicale) – optional ──────────────────────
+  # Uncomment to enable sync feature with iPhone/Android calendars
+  # caldav:
+  #   image: tomsquest/docker-radicale:latest
+  #   container_name: isaac-caldav
+  #   restart: unless-stopped
+  #   ports:
+  #     - "5232:5232"
+  #   volumes:
+  #     - isaac-caldav:/data
+  #   networks:
+  #     - isaac-net
+
+# ── Volumes ────────────────────────────────────────────
+volumes:
+  isaac-data:
+    driver: local
+  # isaac-caldav:
+  #   driver: local
+
+# ── Internal network ───────────────────────────────────────
+networks:
+  isaac-net:
+    driver: bridge

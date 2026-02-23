@@ -1,0 +1,43 @@
+# ─────────────────────────────────────────────
+# Isaac – Backend (Python / FastAPI)
+# ─────────────────────────────────────────────
+FROM python:3.11-slim AS base
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1
+
+WORKDIR /app
+
+# Dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+        libssl-dev \
+        libffi-dev \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# ─── Install Python deps ───────────
+COPY backend/requirements.txt .
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# ─── Copy source ─────────────────────
+COPY backend/ .
+
+# Folder for persistent data (SQLite, uploads, etc.)
+RUN mkdir -p /data
+
+# Expose Uvicorn / FastAPI port
+EXPOSE 8000
+
+# Non-root user for security sake
+RUN addgroup --system isaac && adduser --system --ingroup isaac isaac
+RUN chown -R isaac:isaac /app /data
+USER isaac
+
+# Env vars that could be overwritten in runtime
+ENV DATABASE_URL="sqlite:////data/isaac.db" \
+    UPLOAD_DIR="/data/uploads" \
+    SECRET_KEY="change-me-in-production"
+
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
