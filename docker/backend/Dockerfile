@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install system dependencies for lxml, cryptography, etc.
+# Install system dependencies for lxml, cryptography, etc
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         gcc \
