@@ -24,7 +24,7 @@ COPY VERSION CHANGELOG.md ./
 # Create data and logs directories (relative to backend working dir)
 RUN mkdir -p /app/backend/data /app/backend/logs
 
-# Create non-root user
+# Create non-root user 
 RUN groupadd -r isaac && useradd -r -g isaac -d /app isaac
 RUN chown -R isaac:isaac /app
 
